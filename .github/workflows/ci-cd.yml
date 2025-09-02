@@ -96,97 +96,97 @@ jobs:
     # ================================
     # 3. LOCALHOST DEPLOYMENT
     # ================================
-    - name:  Localhost Deploy - Stop Old Container
-      run: |
-        echo " Stopping existing container..."
-        docker stop hackathon-local || true
-        docker rm hackathon-local || true
+    #- name:  Localhost Deploy - Stop Old Container
+    #  run: |
+    #    echo " Stopping existing container..."
+    #    docker stop hackathon-local || true
+    #    docker rm hackathon-local || true
+#
+    #- name:  Localhost Deploy - Run New Container
+    #  run: |
+    #    echo " Deploying to localhost..."
+    #    
+    #    # Run the new container
+    #    docker run -d \
+    #      --name hackathon-local \
+    #      --restart unless-stopped \
+    #      -p 8080:80 \
+    #      -p 3000:3000 \
+    #      -p 5000:5000 \
+    #      -e NODE_ENV=production \
+    #      ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
+    #    
+    #    echo " Container started successfully!"
+#
+    #- name:  Localhost Deploy - Health Check
+    #  run: |
+    #    echo " Performing health check..."
+    #    sleep 5
+    #    
+    #    if docker ps | grep -q hackathon-local; then
+    #      echo " Container is running successfully!"
+    #      echo " Container info:"
+    #      docker ps | grep hackathon-local
+    #      echo ""
+    #      echo " Your app is now running at:"
+    #      echo "   - http://localhost:8080"
+    #      echo "   - http://localhost:3000"
+    #      echo "   - http://localhost:5000"
+    #      echo ""
+    #      echo " Container logs (last 10 lines):"
+    #      docker logs --tail 10 hackathon-local
+    #    else
+    #      echo " Container failed to start!"
+    #      echo " Container logs:"
+    #      docker logs hackathon-local
+    #      exit 1
+    #    fi
+#
+    #- name: 🧹 Localhost Deploy - Cleanup
+    #  run: |
+    #    echo "🧹 Cleaning up old Docker images..."
+    #    docker image prune -f
+    #    echo " Cleanup completed!"
+    ## ================================
+    ## 4. DEPLOYMENT SUMMARY STAGE
+    ## ================================
+    #- name:  Summary - Generate Deployment Report
+    #  run: |
+    #    echo "=== Deployment Summary ==="
+    #    
+    #    cat << 'EOF'
+    #    ╔═══════════════════════════════════════════════════════╗
+    #    ║              🚀 DEPLOYMENT SUMMARY 🚀                ║
+    #    ╠═══════════════════════════════════════════════════════╣
+    #    EOF
+    #    
+    #    echo "║ Build Number: ${{ github.run_number }}"
+    #    echo "║ Git Branch: ${{ env.GIT_BRANCH }}"
+    #    echo "║ Git Commit: ${{ env.GIT_COMMIT_HASH }}"
+    #    echo "║ Commit Author: ${{ env.GIT_AUTHOR }}"
+    #    echo "║ Commit Message: ${{ env.GIT_MESSAGE }}"
+    #    echo "║ Docker Image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+    #    echo "║ Docker Hub: https://hub.docker.com/r/${{ env.DOCKER_IMAGE }}/tags"
+    #    echo "║ Build Status:  SUCCESS"
+    #    echo "║ Workflow: ${{ github.workflow }}"
+    #    echo "║ Triggered by: ${{ github.event_name }}"
+    #    echo "║ Repository: ${{ github.repository }}"
+    #    echo "║ Container Name: hackathon-local"
+    #    echo "║ Status:  RUNNING ON LOCALHOST"
+    #    echo "║ Access URLs:"
+    #    echo "║   - http://localhost:8080"
+    #    echo "║   - http://localhost:3000"
+    #    echo "║   - http://localhost:5000"
+    #   
+    #    
+    #    cat << 'EOF'
+    #    ╚═══════════════════════════════════════════════════════╝
+    #    EOF
+    #    
+    #    echo ""
+    #    echo " Deployment completed successfully!"
+    #    echo " View build: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-    - name:  Localhost Deploy - Run New Container
-      run: |
-        echo " Deploying to localhost..."
-        
-        # Run the new container
-        docker run -d \
-          --name hackathon-local \
-          --restart unless-stopped \
-          -p 8080:80 \
-          -p 3000:3000 \
-          -p 5000:5000 \
-          -e NODE_ENV=production \
-          ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
-        
-        echo " Container started successfully!"
-
-    - name:  Localhost Deploy - Health Check
-      run: |
-        echo " Performing health check..."
-        sleep 5
-        
-        if docker ps | grep -q hackathon-local; then
-          echo " Container is running successfully!"
-          echo " Container info:"
-          docker ps | grep hackathon-local
-          echo ""
-          echo " Your app is now running at:"
-          echo "   - http://localhost:8080"
-          echo "   - http://localhost:3000"
-          echo "   - http://localhost:5000"
-          echo ""
-          echo " Container logs (last 10 lines):"
-          docker logs --tail 10 hackathon-local
-        else
-          echo " Container failed to start!"
-          echo " Container logs:"
-          docker logs hackathon-local
-          exit 1
-        fi
-
-    - name: 🧹 Localhost Deploy - Cleanup
-      run: |
-        echo "🧹 Cleaning up old Docker images..."
-        docker image prune -f
-        echo " Cleanup completed!"
-    # ================================
-    # 4. DEPLOYMENT SUMMARY STAGE
-    # ================================
-    - name:  Summary - Generate Deployment Report
-      run: |
-        echo "=== Deployment Summary ==="
-        
-        cat << 'EOF'
-        ╔═══════════════════════════════════════════════════════╗
-        ║              🚀 DEPLOYMENT SUMMARY 🚀                ║
-        ╠═══════════════════════════════════════════════════════╣
-        EOF
-        
-        echo "║ Build Number: ${{ github.run_number }}"
-        echo "║ Git Branch: ${{ env.GIT_BRANCH }}"
-        echo "║ Git Commit: ${{ env.GIT_COMMIT_HASH }}"
-        echo "║ Commit Author: ${{ env.GIT_AUTHOR }}"
-        echo "║ Commit Message: ${{ env.GIT_MESSAGE }}"
-        echo "║ Docker Image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
-        echo "║ Docker Hub: https://hub.docker.com/r/${{ env.DOCKER_IMAGE }}/tags"
-        echo "║ Build Status:  SUCCESS"
-        echo "║ Workflow: ${{ github.workflow }}"
-        echo "║ Triggered by: ${{ github.event_name }}"
-        echo "║ Repository: ${{ github.repository }}"
-        echo "║ Container Name: hackathon-local"
-        echo "║ Status:  RUNNING ON LOCALHOST"
-        echo "║ Access URLs:"
-        echo "║   - http://localhost:8080"
-        echo "║   - http://localhost:3000"
-        echo "║   - http://localhost:5000"
-       
-        
-        cat << 'EOF'
-        ╚═══════════════════════════════════════════════════════╝
-        EOF
-        
-        echo ""
-        echo " Deployment completed successfully!"
-        echo " View build: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-    
+    ###### uncomment these upper stages when image is or Docker file is created Keep in this (.github/Dockerfile)
 
   
