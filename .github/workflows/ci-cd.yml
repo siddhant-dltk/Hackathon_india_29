@@ -1,0 +1,211 @@
+name: 🚀 Hackathon2025 CI/CD Pipeline
+
+# Trigger the workflow on push to main branch and pull requests
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Allow manual triggering
+
+# Environment variables available to all jobs
+env:
+  DOCKER_IMAGE: saikat124/hackathon2025_29
+  DOCKER_REGISTRY: docker.io
+  K8S_NAMESPACE: default
+  K8S_DEPLOYMENT_NAME: hackathon2025-29-deployment
+
+jobs:
+  build-and-deploy:
+    name:  Build and Deploy Application
+    runs-on: ubuntu-latest
+    
+    steps:
+    # ================================
+    # 1. GIT SCM STAGE
+    # ================================
+    - name:  Git SCM - Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch full history for better Git info
+    
+    - name:  Git SCM - Extract Commit Information
+      id: git_info
+      run: |
+        echo "=== Git SCM Stage ==="
+        echo " Pipeline triggered by code commit"
+        
+        # Extract Git information
+        GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+        GIT_BRANCH=${GITHUB_REF#refs/heads/}
+        GIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+        GIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+        DOCKER_TAG="${GITHUB_RUN_NUMBER}-${GIT_COMMIT_HASH}"
+        
+        # Set outputs for other steps
+        echo "git_commit_hash=${GIT_COMMIT_HASH}" >> $GITHUB_OUTPUT
+        echo "git_branch=${GIT_BRANCH}" >> $GITHUB_OUTPUT
+        echo "git_author=${GIT_AUTHOR}" >> $GITHUB_OUTPUT
+        echo "git_message=${GIT_MESSAGE}" >> $GITHUB_OUTPUT
+        echo "docker_tag=${DOCKER_TAG}" >> $GITHUB_OUTPUT
+        
+        # Display information
+        echo " Code checkout completed"
+        echo " Branch: ${GIT_BRANCH}"
+        echo " Commit: ${GIT_COMMIT_HASH}"
+        echo " Author: ${GIT_AUTHOR}"
+        echo " Message: ${GIT_MESSAGE}"
+        echo "  Docker Tag: ${DOCKER_TAG}"
+        
+        # Set environment variables for subsequent steps
+        echo "GIT_COMMIT_HASH=${GIT_COMMIT_HASH}" >> $GITHUB_ENV
+        echo "GIT_BRANCH=${GIT_BRANCH}" >> $GITHUB_ENV
+        echo "GIT_AUTHOR=${GIT_AUTHOR}" >> $GITHUB_ENV
+        echo "GIT_MESSAGE=${GIT_MESSAGE}" >> $GITHUB_ENV
+        echo "DOCKER_TAG=${DOCKER_TAG}" >> $GITHUB_ENV
+
+    # ================================
+    # 2. DOCKER BUILD STAGE
+    # ================================
+    - name:  Docker Build - Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name:  Docker Build - Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    - name:  Docker Build - Build and Push Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
+          ${{ env.DOCKER_IMAGE }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    - name:  Docker Build - Summary
+      run: |
+        echo "=== Docker Build Stage ==="
+        echo " Building Docker image for commit: ${{ env.GIT_COMMIT_HASH }}"
+        echo " Docker images built and pushed:"
+        echo "   - ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+        echo "   - ${{ env.DOCKER_IMAGE }}:latest"
+        echo " Docker build and push completed successfully"
+
+    # ================================
+    # 3. KUBERNETES DEPLOYMENT STAGE
+    # ================================
+    - name:  K8s Deploy - Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name:  K8s Deploy - Configure Kubernetes Context
+      run: |
+        echo "=== Kubernetes Deployment Stage ==="
+        echo " Deploying new image to Kubernetes..."
+        
+        # Create kubeconfig from secret
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+        
+        # Verify connection
+        kubectl cluster-info
+    
+    - name:  K8s Deploy - Update Deployment
+      run: |
+        echo " Updating deployment with image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+        
+        # Update deployment with new image
+        kubectl set image deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
+          hackathon2025-29=${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} \
+          -n ${{ env.K8S_NAMESPACE }}
+        
+        # Wait for rollout to complete
+        echo " Waiting for deployment rollout to complete..."
+        kubectl rollout status deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
+          -n ${{ env.K8S_NAMESPACE }} \
+          --timeout=300s
+    
+    - name:  K8s Deploy - Verify Deployment
+      run: |
+        echo " Verifying deployment status..."
+        
+        # Get pod status
+        kubectl get pods -n ${{ env.K8S_NAMESPACE }} \
+          -l app=hackathon2025-29 \
+          -o wide
+        
+        # Get service information
+        echo " Service information:"
+        kubectl get services -n ${{ env.K8S_NAMESPACE }} \
+          -l app=hackathon2025-29
+        
+        # Get deployment details
+        echo " Deployment details:"
+        kubectl describe deployment ${{ env.K8S_DEPLOYMENT_NAME }} \
+          -n ${{ env.K8S_NAMESPACE }} | head -20
+        
+        echo " Application deployed successfully to Kubernetes!"
+        echo " New version from commit ${{ env.GIT_COMMIT_HASH }} is now live"
+
+    # ================================
+    # 4. DEPLOYMENT SUMMARY STAGE
+    # ================================
+    - name:  Summary - Generate Deployment Report
+      run: |
+        echo "=== Deployment Summary ==="
+        
+        cat << 'EOF'
+        ╔═══════════════════════════════════════════════════════╗
+        ║              🚀 DEPLOYMENT SUMMARY 🚀                ║
+        ╠═══════════════════════════════════════════════════════╣
+        EOF
+        
+        echo "║ Build Number: ${{ github.run_number }}"
+        echo "║ Git Branch: ${{ env.GIT_BRANCH }}"
+        echo "║ Git Commit: ${{ env.GIT_COMMIT_HASH }}"
+        echo "║ Commit Author: ${{ env.GIT_AUTHOR }}"
+        echo "║ Commit Message: ${{ env.GIT_MESSAGE }}"
+        echo "║ Docker Image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+        echo "║ Docker Hub: https://hub.docker.com/r/${{ env.DOCKER_IMAGE }}/tags"
+        echo "║ Kubernetes Namespace: ${{ env.K8S_NAMESPACE }}"
+        echo "║ Deployment Name: ${{ env.K8S_DEPLOYMENT_NAME }}"
+        echo "║ Build Status:  SUCCESS"
+        echo "║ Workflow: ${{ github.workflow }}"
+        echo "║ Triggered by: ${{ github.event_name }}"
+        echo "║ Repository: ${{ github.repository }}"
+        
+        cat << 'EOF'
+        ╚═══════════════════════════════════════════════════════╝
+        EOF
+        
+        echo ""
+        echo " Deployment completed successfully!"
+        echo " View build: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+    
+
+  # ================================
+  # CLEANUP JOB (Optional)
+  # ================================
+  cleanup:
+    name: 🧹 Cleanup Old Images
+    runs-on: ubuntu-latest
+    needs: build-and-deploy
+    if: success()
+    
+    steps:
+    - name: 🧹 Cleanup - Remove Old Docker Images (Optional)
+      run: |
+        echo "=== Cleanup Stage ==="
+        echo "ℹ️  This step would typically clean up old Docker images"
+        echo "ℹ️  For Docker Hub, you can configure retention policies in the registry"
+        echo "✅ Cleanup completed"
