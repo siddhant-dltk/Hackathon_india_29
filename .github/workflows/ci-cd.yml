@@ -1,4 +1,4 @@
-name: 🚀 Hackathon2025 CI/CD Pipeline
+name:  Hackathon2025 CI/CD Pipeline
 
 # Trigger the workflow on push to main branch and pull requests
 on:
@@ -67,16 +67,16 @@ jobs:
     # ================================
     # 2. DOCKER BUILD STAGE
     # ================================
-    #- name:  Docker Build - Set up Docker Buildx
-    #  uses: docker/setup-buildx-action@v3
-    #
-    #- name:  Docker Build - Login to Docker Hub
-    #  uses: docker/login-action@v3
-    #  with:
-    #    registry: ${{ env.DOCKER_REGISTRY }}
-    #    username: ${{ secrets.DOCKERHUB_USERNAME }}
-    #    password: ${{ secrets.DOCKERHUB_TOKEN }}
-    #
+    - name:  Docker Build - Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name:  Docker Build - Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
     #- name:  Docker Build - Build and Push Image
     #  uses: docker/build-push-action@v5
     #  with:
@@ -196,16 +196,16 @@ jobs:
   # ================================
   # CLEANUP JOB (Optional)
   # ================================
-  cleanup:
-    name: 🧹 Cleanup Old Images
-    runs-on: ubuntu-latest
-    needs: build-and-deploy
-    if: success()
-    
-    steps:
-    - name: 🧹 Cleanup - Remove Old Docker Images (Optional)
-      run: |
-        echo "=== Cleanup Stage ==="
-        echo "ℹ️  This step would typically clean up old Docker images"
-        echo "ℹ️  For Docker Hub, you can configure retention policies in the registry"
-        echo "✅ Cleanup completed"
+  #cleanup:
+  #  name: 🧹 Cleanup Old Images
+  #  runs-on: ubuntu-latest
+  #  needs: build-and-deploy
+  #  if: success()
+  #  
+  #  steps:
+  #  - name: 🧹 Cleanup - Remove Old Docker Images (Optional)
+  #    run: |
+  #      echo "=== Cleanup Stage ==="
+  #      echo "ℹ️  This step would typically clean up old Docker images"
+  #      echo "ℹ️  For Docker Hub, you can configure retention policies in the registry"
+  #      echo "✅ Cleanup completed"
