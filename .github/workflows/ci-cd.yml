@@ -3,7 +3,7 @@ name:  Hackathon2025 CI/CD Pipeline
 # Trigger the workflow on push to main branch and pull requests
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_dispatch: # Allow manual triggering
@@ -12,8 +12,6 @@ on:
 env:
   DOCKER_IMAGE: saikat124/hackathon2025_29
   DOCKER_REGISTRY: docker.io
-  K8S_NAMESPACE: default
-  K8S_DEPLOYMENT_NAME: hackathon2025-29-deployment
 
 jobs:
   build-and-deploy:
@@ -77,18 +75,15 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     
-    #- name:  Docker Build - Build and Push Image
-    #  uses: docker/build-push-action@v5
-    #  with:
-    #    context: .
-    #    push: true
-    #    tags: |
-    #      ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
-    #      ${{ env.DOCKER_IMAGE }}:latest
-    #    cache-from: type=gha
-    #    cache-to: type=gha,mode=max
-    #    platforms: linux/amd64,linux/arm64
-    #
+    - name:  Docker Build - Build and Push Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        load: true  # Also load locally for immediate use
+        tags: |
+          ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
+          ${{ env.DOCKER_IMAGE }}:latest
     #- name:  Docker Build - Summary
     #  run: |
     #    echo "=== Docker Build Stage ==="
@@ -155,7 +150,60 @@ jobs:
     #    
     #    echo " Application deployed successfully to Kubernetes!"
     #    echo " New version from commit ${{ env.GIT_COMMIT_HASH }} is now live"
+    # ================================
+    # 3. LOCALHOST DEPLOYMENT
+    # ================================
+    - name:  Localhost Deploy - Stop Old Container
+      run: |
+        echo " Stopping existing container..."
+        docker stop hackathon-local || true
+        docker rm hackathon-local || true
 
+    - name:  Localhost Deploy - Run New Container
+      run: |
+        echo " Deploying to localhost..."
+        
+        # Run the new container
+        docker run -d \
+          --name hackathon-local \
+          --restart unless-stopped \
+          -p 8080:80 \
+          -p 3000:3000 \
+          -p 5000:5000 \
+          -e NODE_ENV=production \
+          ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
+        
+        echo " Container started successfully!"
+
+    - name:  Localhost Deploy - Health Check
+      run: |
+        echo " Performing health check..."
+        sleep 5
+        
+        if docker ps | grep -q hackathon-local; then
+          echo " Container is running successfully!"
+          echo " Container info:"
+          docker ps | grep hackathon-local
+          echo ""
+          echo " Your app is now running at:"
+          echo "   - http://localhost:8080"
+          echo "   - http://localhost:3000"
+          echo "   - http://localhost:5000"
+          echo ""
+          echo " Container logs (last 10 lines):"
+          docker logs --tail 10 hackathon-local
+        else
+          echo " Container failed to start!"
+          echo " Container logs:"
+          docker logs hackathon-local
+          exit 1
+        fi
+
+    - name: 🧹 Localhost Deploy - Cleanup
+      run: |
+        echo "🧹 Cleaning up old Docker images..."
+        docker image prune -f
+        echo " Cleanup completed!"
     # ================================
     # 4. DEPLOYMENT SUMMARY STAGE
     # ================================
@@ -180,6 +228,13 @@ jobs:
         echo "║ Workflow: ${{ github.workflow }}"
         echo "║ Triggered by: ${{ github.event_name }}"
         echo "║ Repository: ${{ github.repository }}"
+        echo "║ Container Name: hackathon-local"
+        echo "║ Status:  RUNNING ON LOCALHOST"
+        echo "║ Access URLs:"
+        echo "║   - http://localhost:8080"
+        echo "║   - http://localhost:3000"
+        echo "║   - http://localhost:5000"
+       
         
         cat << 'EOF'
         ╚═══════════════════════════════════════════════════════╝
