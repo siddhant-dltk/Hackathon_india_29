@@ -74,16 +74,17 @@ jobs:
         registry: ${{ env.DOCKER_REGISTRY }}
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    
-    - name:  Docker Build - Build and Push Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        load: true  # Also load locally for immediate use
-        tags: |
-          ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
-          ${{ env.DOCKER_IMAGE }}:latest
+    ### uncomment when image is created 
+    #- name:  Docker Build - Build and Push Image
+    #  uses: docker/build-push-action@v5
+    #  with:
+    #    context: .
+    #    file: ./Dockerfile  
+    #    push: true
+    #    load: true  # Also load locally for immediate use
+    #    tags: |
+    #      ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
+    #      ${{ env.DOCKER_IMAGE }}:latest
     #- name:  Docker Build - Summary
     #  run: |
     #    echo "=== Docker Build Stage ==="
@@ -92,64 +93,6 @@ jobs:
     #    echo "   - ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
     #    echo "   - ${{ env.DOCKER_IMAGE }}:latest"
     #    echo " Docker build and push completed successfully"
-
-    # ================================
-    # 3. KUBERNETES DEPLOYMENT STAGE
-    # ================================
-    #- name:  K8s Deploy - Setup kubectl
-    #  uses: azure/setup-kubectl@v3
-    #  with:
-    #    version: 'latest'
-    #
-    #- name:  K8s Deploy - Configure Kubernetes Context
-    #  run: |
-    #    echo "=== Kubernetes Deployment Stage ==="
-    #    echo " Deploying new image to Kubernetes..."
-    #    
-    #    # Create kubeconfig from secret
-    #    mkdir -p $HOME/.kube
-    #    echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
-    #    chmod 600 $HOME/.kube/config
-    #    
-    #    # Verify connection
-    #    kubectl cluster-info
-    #
-    #- name:  K8s Deploy - Update Deployment
-    #  run: |
-    #    echo " Updating deployment with image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
-    #    
-    #    # Update deployment with new image
-    #    kubectl set image deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
-    #      hackathon2025-29=${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} \
-    #      -n ${{ env.K8S_NAMESPACE }}
-    #    
-    #    # Wait for rollout to complete
-    #    echo " Waiting for deployment rollout to complete..."
-    #    kubectl rollout status deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
-    #      -n ${{ env.K8S_NAMESPACE }} \
-    #      --timeout=300s
-    #
-    #- name:  K8s Deploy - Verify Deployment
-    #  run: |
-    #    echo " Verifying deployment status..."
-    #    
-    #    # Get pod status
-    #    kubectl get pods -n ${{ env.K8S_NAMESPACE }} \
-    #      -l app=hackathon2025-29 \
-    #      -o wide
-    #    
-    #    # Get service information
-    #    echo " Service information:"
-    #    kubectl get services -n ${{ env.K8S_NAMESPACE }} \
-    #      -l app=hackathon2025-29
-    #    
-    #    # Get deployment details
-    #    echo " Deployment details:"
-    #    kubectl describe deployment ${{ env.K8S_DEPLOYMENT_NAME }} \
-    #      -n ${{ env.K8S_NAMESPACE }} | head -20
-    #    
-    #    echo " Application deployed successfully to Kubernetes!"
-    #    echo " New version from commit ${{ env.GIT_COMMIT_HASH }} is now live"
     # ================================
     # 3. LOCALHOST DEPLOYMENT
     # ================================
@@ -246,19 +189,4 @@ jobs:
 
     
 
-  # ================================
-  # CLEANUP JOB (Optional)
-  # ================================
-  #cleanup:
-  #  name: 🧹 Cleanup Old Images
-  #  runs-on: ubuntu-latest
-  #  needs: build-and-deploy
-  #  if: success()
-  #  
-  #  steps:
-  #  - name: 🧹 Cleanup - Remove Old Docker Images (Optional)
-  #    run: |
-  #      echo "=== Cleanup Stage ==="
-  #      echo "ℹ️  This step would typically clean up old Docker images"
-  #      echo "ℹ️  For Docker Hub, you can configure retention policies in the registry"
-  #      echo "✅ Cleanup completed"
+  
