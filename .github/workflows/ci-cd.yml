@@ -67,94 +67,94 @@ jobs:
     # ================================
     # 2. DOCKER BUILD STAGE
     # ================================
-    - name:  Docker Build - Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name:  Docker Build - Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.DOCKER_REGISTRY }}
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    
-    - name:  Docker Build - Build and Push Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: |
-          ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
-          ${{ env.DOCKER_IMAGE }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
-    
-    - name:  Docker Build - Summary
-      run: |
-        echo "=== Docker Build Stage ==="
-        echo " Building Docker image for commit: ${{ env.GIT_COMMIT_HASH }}"
-        echo " Docker images built and pushed:"
-        echo "   - ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
-        echo "   - ${{ env.DOCKER_IMAGE }}:latest"
-        echo " Docker build and push completed successfully"
+    #- name:  Docker Build - Set up Docker Buildx
+    #  uses: docker/setup-buildx-action@v3
+    #
+    #- name:  Docker Build - Login to Docker Hub
+    #  uses: docker/login-action@v3
+    #  with:
+    #    registry: ${{ env.DOCKER_REGISTRY }}
+    #    username: ${{ secrets.DOCKERHUB_USERNAME }}
+    #    password: ${{ secrets.DOCKERHUB_TOKEN }}
+    #
+    #- name:  Docker Build - Build and Push Image
+    #  uses: docker/build-push-action@v5
+    #  with:
+    #    context: .
+    #    push: true
+    #    tags: |
+    #      ${{ env.DOCKER_IMAGE }}:${{ steps.git_info.outputs.docker_tag }}
+    #      ${{ env.DOCKER_IMAGE }}:latest
+    #    cache-from: type=gha
+    #    cache-to: type=gha,mode=max
+    #    platforms: linux/amd64,linux/arm64
+    #
+    #- name:  Docker Build - Summary
+    #  run: |
+    #    echo "=== Docker Build Stage ==="
+    #    echo " Building Docker image for commit: ${{ env.GIT_COMMIT_HASH }}"
+    #    echo " Docker images built and pushed:"
+    #    echo "   - ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+    #    echo "   - ${{ env.DOCKER_IMAGE }}:latest"
+    #    echo " Docker build and push completed successfully"
 
     # ================================
     # 3. KUBERNETES DEPLOYMENT STAGE
     # ================================
-    - name:  K8s Deploy - Setup kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'latest'
-    
-    - name:  K8s Deploy - Configure Kubernetes Context
-      run: |
-        echo "=== Kubernetes Deployment Stage ==="
-        echo " Deploying new image to Kubernetes..."
-        
-        # Create kubeconfig from secret
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
-        chmod 600 $HOME/.kube/config
-        
-        # Verify connection
-        kubectl cluster-info
-    
-    - name:  K8s Deploy - Update Deployment
-      run: |
-        echo " Updating deployment with image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
-        
-        # Update deployment with new image
-        kubectl set image deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
-          hackathon2025-29=${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} \
-          -n ${{ env.K8S_NAMESPACE }}
-        
-        # Wait for rollout to complete
-        echo " Waiting for deployment rollout to complete..."
-        kubectl rollout status deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
-          -n ${{ env.K8S_NAMESPACE }} \
-          --timeout=300s
-    
-    - name:  K8s Deploy - Verify Deployment
-      run: |
-        echo " Verifying deployment status..."
-        
-        # Get pod status
-        kubectl get pods -n ${{ env.K8S_NAMESPACE }} \
-          -l app=hackathon2025-29 \
-          -o wide
-        
-        # Get service information
-        echo " Service information:"
-        kubectl get services -n ${{ env.K8S_NAMESPACE }} \
-          -l app=hackathon2025-29
-        
-        # Get deployment details
-        echo " Deployment details:"
-        kubectl describe deployment ${{ env.K8S_DEPLOYMENT_NAME }} \
-          -n ${{ env.K8S_NAMESPACE }} | head -20
-        
-        echo " Application deployed successfully to Kubernetes!"
-        echo " New version from commit ${{ env.GIT_COMMIT_HASH }} is now live"
+    #- name:  K8s Deploy - Setup kubectl
+    #  uses: azure/setup-kubectl@v3
+    #  with:
+    #    version: 'latest'
+    #
+    #- name:  K8s Deploy - Configure Kubernetes Context
+    #  run: |
+    #    echo "=== Kubernetes Deployment Stage ==="
+    #    echo " Deploying new image to Kubernetes..."
+    #    
+    #    # Create kubeconfig from secret
+    #    mkdir -p $HOME/.kube
+    #    echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+    #    chmod 600 $HOME/.kube/config
+    #    
+    #    # Verify connection
+    #    kubectl cluster-info
+    #
+    #- name:  K8s Deploy - Update Deployment
+    #  run: |
+    #    echo " Updating deployment with image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+    #    
+    #    # Update deployment with new image
+    #    kubectl set image deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
+    #      hackathon2025-29=${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} \
+    #      -n ${{ env.K8S_NAMESPACE }}
+    #    
+    #    # Wait for rollout to complete
+    #    echo " Waiting for deployment rollout to complete..."
+    #    kubectl rollout status deployment/${{ env.K8S_DEPLOYMENT_NAME }} \
+    #      -n ${{ env.K8S_NAMESPACE }} \
+    #      --timeout=300s
+    #
+    #- name:  K8s Deploy - Verify Deployment
+    #  run: |
+    #    echo " Verifying deployment status..."
+    #    
+    #    # Get pod status
+    #    kubectl get pods -n ${{ env.K8S_NAMESPACE }} \
+    #      -l app=hackathon2025-29 \
+    #      -o wide
+    #    
+    #    # Get service information
+    #    echo " Service information:"
+    #    kubectl get services -n ${{ env.K8S_NAMESPACE }} \
+    #      -l app=hackathon2025-29
+    #    
+    #    # Get deployment details
+    #    echo " Deployment details:"
+    #    kubectl describe deployment ${{ env.K8S_DEPLOYMENT_NAME }} \
+    #      -n ${{ env.K8S_NAMESPACE }} | head -20
+    #    
+    #    echo " Application deployed successfully to Kubernetes!"
+    #    echo " New version from commit ${{ env.GIT_COMMIT_HASH }} is now live"
 
     # ================================
     # 4. DEPLOYMENT SUMMARY STAGE
